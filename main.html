@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Voice to Text and OpenAI Integration</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f2f2f2;
+    }
+
+    #output {
+      font-size: 18px;
+      text-align: left;
+      margin: 20px auto;
+      max-width: 600px;
+      padding: 10px;
+      background-color: #fff;
+      border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    #startButton,
+    #stopButton {
+      font-size: 16px;
+      padding: 10px 20px;
+      margin-top: 20px;
+      background-color: #4CAF50;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    #startButton:hover,
+    #stopButton:hover {
+      background-color: #45a049;
+    }
+
+    #stopButton:disabled {
+      background-color: #ccc;
+      cursor: not-allowed;
+    }
+  
+  </style>
+</head>
+<body>
+  <h1>Voice to Text and OpenAI Integration</h1>
+  <button id="startButton">Start Recording</button>
+  <button id="stopButton" disabled>Stop Recording</button>
+  <div id="output"></div>
+
+  <script>
+    window.SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if ('SpeechRecognition' in window) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+
+      const startButton = document.getElementById('startButton');
+      const stopButton = document.getElementById('stopButton');
+      const outputDiv = document.getElementById('output');
+      let finalTranscript = '';
+
+      recognition.onresult = function(event) {
+        const result = event.results[event.results.length - 1];
+        const transcript = result[0].transcript;
+
+        if (result.isFinal) {
+          finalTranscript += transcript + ' ';
+        } else {
+          outputDiv.innerHTML = '<p>' + finalTranscript + '<b>' + transcript + '</b></p>';
+        }
+      };
+
+      recognition.onend = function() {
+        startButton.disabled = false;
+        stopButton.disabled = true;
+        askOpenAI(finalTranscript);
+      };
+
+      startButton.addEventListener('click', function() {
+        recognition.start();
+        startButton.disabled = true;
+        stopButton.disabled = false;
+        outputDiv.innerHTML = '';
+        finalTranscript = '';
+      });
+
+      stopButton.addEventListener('click', function() {
+        recognition.stop();
+        startButton.disabled = false;
+        stopButton.disabled = true;
+      });
+    } else {
+      const errorMessage = document.createElement('p');
+      errorMessage.textContent = 'Web Speech API is not supported in this browser.';
+      document.body.appendChild(errorMessage);
+    }
+
+    function askOpenAI(question) {
+      const openApiKey = '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';
+      const openApiEndpoint = 'https://api.openai.com/v1/chat/completions';
+///v1/chat/completions
+      const requestOptions = {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${openApiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          "prompt": question,
+          "max_tokens": 60
+        })
+      };
+
+      fetch(openApiEndpoint, requestOptions)
+    .then(response => response.json())
+    .then(data => {
+      if (data.choices && data.choices.length > 0) {
+        const answer = data.choices[0].text.trim();
+        outputDiv.innerHTML += `<p><b>OpenAI Answer:</b> ${answer}</p>`;
+      } else {
+        console.error('No choices in OpenAI response:', data);
+      }
+    })
+    .catch(error => {
+      console.error('Error while fetching OpenAI response:', error);
+    });
+
+    }
+  </script>
+</body>
+</html>
